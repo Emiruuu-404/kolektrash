@@ -1,9 +1,10 @@
-const API_BASE_URL = 'http://localhost/koletrash/backend/api';
+const API_BASE_URL = '/api';
 
 export const authService = {
   async signup(userData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/register.php`, {
+      // Send the data exactly as received from the form
+      const response = await fetch(`${API_BASE_URL}/register_resident_new.php`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

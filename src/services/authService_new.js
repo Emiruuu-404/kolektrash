@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost/koletrash/backend/api';
+const API_BASE_URL = '/api';
 
 export const authService = {
   // For residents (users table)

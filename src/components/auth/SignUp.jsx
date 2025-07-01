@@ -134,6 +134,8 @@ export default function SignUp() {
       }
 
       const response = await authService.signup(userData)
+      
+      // Set success message and start redirect process
       setSuccess('Account created successfully! Redirecting to login...')
       
       // Clear form
@@ -148,10 +150,16 @@ export default function SignUp() {
         confirmPassword: '',
       })
 
-      // Redirect to login after 2 seconds
+      // Redirect to login after showing success for 1.5 seconds
       setTimeout(() => {
-        navigate('/login')
-      }, 2000)
+        navigate('/login', { 
+          state: { 
+            message: 'Account created successfully! Please login with your credentials.',
+            newUser: true,
+            username: userData.username 
+          }
+        })
+      }, 1500)
 
     } catch (error) {
       setError(error.message || 'Signup failed. Please try again.')
@@ -174,6 +182,23 @@ export default function SignUp() {
               <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
               <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success overlay */}
+      {success && (
+        <div className="fixed inset-0 bg-white bg-opacity-95 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="text-center p-8 bg-white rounded-2xl shadow-2xl max-w-sm mx-4">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">✅</span>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">Account Created Successfully!</h3>
+            <p className="text-sm text-gray-600 mb-4">Welcome to KolekTrash! You will be redirected to the login page.</p>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="bg-green-600 h-2 rounded-full animate-pulse" style={{width: '100%'}}></div>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">Redirecting...</p>
           </div>
         </div>
       )}
