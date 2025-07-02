@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FiSearch, FiPlus, FiUser, FiCheckCircle, FiClock, FiXCircle } from "react-icons/fi";
 
 // Environmental theme colors - Tree-inspired palette (same as ManageRoute)
@@ -33,88 +33,13 @@ const roleColors = {
   "Resident": "bg-green-300 text-gray-800",
 };
 
-const users = [
-  {
-    id: 1,
-    name: "John Doe",
-    email: "john@waste.com",
-    role: "Truck Driver",
-    status: "On Duty",
-    team: "Cluster A",
-  },
-  {
-    id: 2,
-    name: "Jane Smith",
-    email: "jane@waste.com",
-    role: "Garbage Collector",
-    status: "Completed Route",
-    team: "Cluster B",
-  },
-  {
-    id: 3,
-    name: "Carlos Reyes",
-    email: "carlos@waste.com",
-    role: "Barangay Head",
-    status: "On Leave",
-    team: "Cluster C",
-  },
-  {
-    id: 4,
-    name: "Maria Lopez",
-    email: "maria@waste.com",
-    role: "Resident",
-    status: "Off Duty",
-    team: "Cluster A",
-  },
-  {
-    id: 5,
-    name: "Alex Tan",
-    email: "alex@waste.com",
-    role: "Truck Driver",
-    status: "Completed Route",
-    team: "Cluster B",
-  },
-  {
-    id: 6,
-    name: "Liza Cruz",
-    email: "liza@waste.com",
-    role: "Garbage Collector",
-    status: "On Duty",
-    team: "Cluster C",
-  },
-  {
-    id: 7,
-    name: "Ramon Santos",
-    email: "ramon@waste.com",
-    role: "Barangay Head",
-    status: "On Duty",
-    team: "Cluster A",
-  },
-  {
-    id: 8,
-    name: "Ella Lim",
-    email: "ella@waste.com",
-    role: "Resident",
-    status: "On Leave",
-    team: "Cluster B",
-  },
-  {
-    id: 9,
-    name: "Ben Cruz",
-    email: "ben@waste.com",
-    role: "Truck Driver",
-    status: "Off Duty",
-    team: "Cluster C",
-  },
-  {
-    id: 10,
-    name: "Grace Yu",
-    email: "grace@waste.com",
-    role: "Garbage Collector",
-    status: "On Duty",
-    team: "Cluster A",
-  },
-];
+const roleDisplay = {
+  truck_driver: "Truck Driver",
+  garbage_collector: "Garbage Collector",
+  barangay_head: "Barangay Head",
+  resident: "Resident",
+  admin: "Admin"
+};
 
 const tasks = [
   {
@@ -224,12 +149,41 @@ export default function ManageUsers() {
   const [status, setStatus] = useState("All");
   const [cluster, setCluster] = useState("All");
   const [selectedUser, setSelectedUser] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({
+    username: "",
+    email: "",
+    password: "",
+    role: "Truck Driver", // default
+  });
+  const [users, setUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+
+  useEffect(() => {
+    async function fetchUsers() {
+      setLoadingUsers(true);
+      try {
+        const res = await fetch("http://localhost/koletrash/backend/api/get_all_users.php");
+        const data = await res.json();
+        if (data.success) {
+          setUsers(data.users);
+        } else {
+          alert(data.message || "Failed to fetch users.");
+        }
+      } catch (err) {
+        alert("Error fetching users.");
+      } finally {
+        setLoadingUsers(false);
+      }
+    }
+    fetchUsers();
+  }, []);
 
   // Filter users
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase());
+      (u.username && u.username.toLowerCase().includes(search.toLowerCase())) ||
+      (u.email && u.email.toLowerCase().includes(search.toLowerCase()));
     const matchesType = accountType === "All" || u.role === accountType;
     const matchesStatus = status === "All" || u.status === status;
     const matchesCluster = cluster === "All" || u.team === cluster;
@@ -288,7 +242,10 @@ export default function ManageUsers() {
 
       {/* Action Buttons - Minimal Design */}
       <div className="flex gap-3 my-6 flex-wrap justify-start">
-        <button className="px-5 py-2.5 bg-green-800 text-white border-none rounded-lg font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 flex items-center gap-2 hover:bg-green-600">
+        <button
+          className="px-5 py-2.5 bg-green-800 text-white border-none rounded-lg font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 flex items-center gap-2 hover:bg-green-600"
+          onClick={() => setShowModal(true)}
+        >
           <FiPlus className="text-base" />
           Create Account
         </button>
@@ -339,7 +296,9 @@ export default function ManageUsers() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-6">
         <div className="bg-white p-5 rounded-lg border border-green-200 text-center">
           <div className="text-sm text-gray-600 mb-2">Total Users</div>
-          <div className="text-2xl font-normal text-green-800">{filteredUsers.length}</div>
+          <div className="text-2xl font-normal text-green-800">
+            {loadingUsers ? "Loading..." : filteredUsers.length}
+          </div>
         </div>
         <div className="bg-white p-5 rounded-lg border border-green-200 text-center">
           <div className="text-sm text-gray-600 mb-2">On Duty</div>
@@ -392,7 +351,7 @@ export default function ManageUsers() {
                     {user.email}
                   </div>
                   <div className="text-sm text-gray-800 mb-2">
-                    {user.role}
+                    {roleDisplay[user.role] || user.role}
                   </div>
                   <div className="text-xs text-gray-500 mb-2">
                     {user.team}
@@ -433,7 +392,7 @@ export default function ManageUsers() {
                       {selectedUser.name}
                     </div>
                     <div className="text-xs text-gray-500">
-                      {selectedUser.role} / {selectedUser.team}
+                      {roleDisplay[selectedUser.role] || selectedUser.role} / {selectedUser.team}
                     </div>
                   </div>
                 </div>
@@ -495,6 +454,90 @@ export default function ManageUsers() {
           </div>
         </div>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <h2 className="text-xl font-semibold mb-4">Create Personnel Account</h2>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                // Send POST request to your backend API
+                try {
+                  const res = await fetch("http://localhost/koletrash/backend/api/register_personnel.php", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(form),
+                  });
+                  const data = await res.json();
+                  if (data.success) {
+                    alert("Account created!");
+                    setShowModal(false);
+                    // Optionally refresh user list here
+                  } else {
+                    alert(data.message || "Failed to create account.");
+                  }
+                } catch (err) {
+                  alert("Error creating account.");
+                }
+              }}
+            >
+              <input
+                className="w-full mb-2 p-2 border rounded"
+                name="username"
+                placeholder="Username"
+                value={form.username}
+                onChange={e => setForm({ ...form, username: e.target.value })}
+                required
+              />
+              <input
+                className="w-full mb-2 p-2 border rounded"
+                name="email"
+                type="email"
+                placeholder="Email"
+                value={form.email}
+                onChange={e => setForm({ ...form, email: e.target.value })}
+                required
+              />
+              <input
+                className="w-full mb-2 p-2 border rounded"
+                name="password"
+                type="password"
+                placeholder="Password"
+                value={form.password}
+                onChange={e => setForm({ ...form, password: e.target.value })}
+                required
+              />
+              <select
+                className="w-full mb-4 p-2 border rounded"
+                name="role"
+                value={form.role}
+                onChange={e => setForm({ ...form, role: e.target.value })}
+                required
+              >
+                <option value="truck_driver">Truck Driver</option>
+                <option value="garbage_collector">Garbage Collector</option>
+                <option value="barangay_head">Barangay Head</option>
+              </select>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  className="px-4 py-2 bg-gray-300 rounded"
+                  onClick={() => setShowModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-green-700 text-white rounded"
+                >
+                  Create
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

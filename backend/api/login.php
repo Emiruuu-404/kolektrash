@@ -1,4 +1,10 @@
 <?php
+file_put_contents(__DIR__ . '/debug.log', 'login.php reached\n', FILE_APPEND);
+
+ini_set('display_errors', 0); // Suppress errors in output
+ini_set('log_errors', 1);     // Log errors to server logs
+error_reporting(E_ALL);       // Report all errors (for logging)
+
 // Headers - Allow all origins for development
 header('Access-Control-Allow-Origin: *');
 header('Content-Type: application/json');
@@ -11,15 +17,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
+file_put_contents(__DIR__ . '/debug.log', 'After require_once\n', FILE_APPEND);
+
 require_once '../config/Database.php';
 require_once '../models/User.php';
+
+file_put_contents(__DIR__ . '/debug.log', 'After DB connect\n', FILE_APPEND);
 
 // Instantiate DB & connect
 $database = new Database();
 $db = $database->connect();
 
+file_put_contents(__DIR__ . '/debug.log', 'After User object\n', FILE_APPEND);
+
 // Instantiate user object
 $user = new User($db);
+
+file_put_contents(__DIR__ . '/debug.log', 'After User instantiation\n', FILE_APPEND);
 
 // Get raw posted data
 $json_input = file_get_contents("php://input");
@@ -35,11 +49,10 @@ $debug_info = array(
 
 // Check if username and password are set
 if(!$data || !isset($data->username) || !isset($data->password)) {
-    echo json_encode(array(
+    echo json_encode([
         'status' => 'error',
-        'message' => 'Missing Required Parameters',
-        'debug' => $debug_info
-    ));
+        'message' => 'Missing Required Parameters'
+    ]);
     exit();
 }
 
@@ -48,27 +61,20 @@ $user->password = $data->password;
 
 // Login user
 if($user->login()) {
-    echo json_encode(array(
+    echo json_encode([
         'status' => 'success',
         'message' => 'Login Successful',
-        'data' => array(
+        'data' => [
             'id' => $user->id,
             'username' => $user->username,
             'email' => $user->email,
             'fullName' => $user->fullName,
-            'role' => $user->role,
-            'phone' => $user->phone,
-            'assignedArea' => $user->assignedArea
-        )
-    ));
+            'role' => $user->role
+        ]
+    ]);
 } else {
-    echo json_encode(array(
+    echo json_encode([
         'status' => 'error',
-        'message' => 'Invalid Credentials',
-        'debug' => array(
-            'attempted_username' => $data->username,
-            'attempted_password' => $data->password,
-            'note' => 'Check if user exists in database and password hash matches'
-        )
-    ));
+        'message' => 'Invalid Credentials'
+    ]);
 }

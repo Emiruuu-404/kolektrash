@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { FiUser, FiMapPin, FiAlertCircle, FiCamera, FiCheckCircle, FiChevronDown, FiChevronUp, FiTag } from 'react-icons/fi';
 import { authService } from '../../services/authService';
@@ -31,64 +30,47 @@ export default function ResidentReport() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        setLoading(true);
-        setError('');
-        
         // Get user data from localStorage first to get the user ID
         const storedUser = localStorage.getItem('user');
-        if (!storedUser) {
-          setError('No user data found. Please log in again.');
-          setLoading(false);
-          return;
-        }
-
-        const userDataLocal = JSON.parse(storedUser);
-        console.log('Stored user data:', userDataLocal);
-        
-        // Fetch fresh data from database using the user ID
-        if (userDataLocal.id || userDataLocal.user_id) {
-          const userId = userDataLocal.id || userDataLocal.user_id;
-          console.log('Fetching data for user ID:', userId);
+        if (storedUser) {
+          const userDataLocal = JSON.parse(storedUser);
           
-          const response = await authService.getUserData(userId);
-          console.log('API Response:', response);
-          
-          if (response.status === 'success' && response.data) {
-            const user = response.data;
-            setUserData(user);
-            
-            // Update form with fetched data
-            setForm(prevForm => ({
-              ...prevForm,
-              name: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Resident User',
-              barangay: user.barangay || user.assignedArea || 'Not assigned'
-            }));
-            
-            console.log('User data set successfully:', user);
+          // Fetch fresh data from database using the user ID
+          if (userDataLocal.id) {
+            const response = await authService.getUserData(userDataLocal.id);
+            if (response.status === 'success') {
+              const user = response.data;
+              setUserData(user);
+              setForm(prevForm => ({
+                ...prevForm,
+                name: user.fullName || user.name || 'Resident User',
+                barangay: user.assignedArea || user.barangay || ''
+              }));
+            } else {
+              console.error('Failed to fetch user data:', response.message);
+              // Fallback to stored data
+              setUserData(userDataLocal);
+              setForm(prevForm => ({
+                ...prevForm,
+                name: userDataLocal.fullName || userDataLocal.name || 'Resident User',
+                barangay: userDataLocal.assignedArea || userDataLocal.barangay || ''
+              }));
+            }
           } else {
-            console.error('Failed to fetch user data:', response.message);
-            // Fallback to stored data
+            // Use stored data if no ID
             setUserData(userDataLocal);
             setForm(prevForm => ({
               ...prevForm,
-              name: userDataLocal.fullName || userDataLocal.name || `${userDataLocal.firstName || ''} ${userDataLocal.lastName || ''}`.trim() || 'Resident User',
-              barangay: userDataLocal.barangay || userDataLocal.assignedArea || 'Not assigned'
+              name: userDataLocal.fullName || userDataLocal.name || 'Resident User',
+              barangay: userDataLocal.assignedArea || userDataLocal.barangay || ''
             }));
           }
         } else {
-          console.log('No user ID found, using stored data');
-          // Use stored data if no ID
-          setUserData(userDataLocal);
-          setForm(prevForm => ({
-            ...prevForm,
-            name: userDataLocal.fullName || userDataLocal.name || `${userDataLocal.firstName || ''} ${userDataLocal.lastName || ''}`.trim() || 'Resident User',
-            barangay: userDataLocal.barangay || userDataLocal.assignedArea || 'Not assigned'
-          }));
+          setError('No user data found. Please log in again.');
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
-        setError('Error loading user data. Using fallback data.');
-        
+        setError('Error loading user data');
         // Try to use stored data as fallback
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
@@ -97,12 +79,11 @@ export default function ResidentReport() {
             setUserData(userDataLocal);
             setForm(prevForm => ({
               ...prevForm,
-              name: userDataLocal.fullName || userDataLocal.name || `${userDataLocal.firstName || ''} ${userDataLocal.lastName || ''}`.trim() || 'Resident User',
-              barangay: userDataLocal.barangay || userDataLocal.assignedArea || 'Not assigned'
+              name: userDataLocal.fullName || userDataLocal.name || 'Resident User',
+              barangay: userDataLocal.assignedArea || userDataLocal.barangay || ''
             }));
           } catch (parseError) {
             console.error('Error parsing stored user data:', parseError);
-            setError('Unable to load user data. Please log in again.');
           }
         }
       } finally {
@@ -113,15 +94,15 @@ export default function ResidentReport() {
     fetchUserData();
   }, []);
 
-  const handleChange = (e) => {
+  function handleChange(e) {
     const { name, value, files } = e.target;
-    setForm(prevForm => ({
-      ...prevForm,
+    setForm(f => ({
+      ...f,
       [name]: files ? files[0] : value,
     }));
-  };
+  }
 
-  const handleSubmit = (e) => {
+  function handleSubmit(e) {
     e.preventDefault();
     setError('');
     if (!form.issueType || !form.description) {
@@ -141,7 +122,7 @@ export default function ResidentReport() {
       photo: null 
     }));
     setTimeout(() => setSuccess(false), 3000);
-  };
+  }
 
   // Show loading state
   if (loading) {
@@ -198,11 +179,7 @@ export default function ResidentReport() {
           <button
             type="button"
             className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-green-200 text-base"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setShowIssueType(prev => !prev);
-            }}
+            onClick={() => setShowIssueType(v => !v)}
             tabIndex={0}
           >
             <span className={form.issueType ? '' : 'text-gray-400'}>{form.issueType || 'Select Issue Type'}</span>
@@ -211,18 +188,16 @@ export default function ResidentReport() {
           {showIssueType && (
             <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto animate-fadeIn">
               <ul>
-                {issueTypes.map((issueType) => (
+                {issueTypes.map((t) => (
                   <li
-                    key={issueType}
-                    className={`px-4 py-2 cursor-pointer hover:bg-green-100 ${form.issueType === issueType ? 'bg-green-50 font-bold' : ''}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setForm(prevForm => ({ ...prevForm, issueType: issueType }));
+                    key={t}
+                    className={`px-4 py-2 cursor-pointer hover:bg-green-100 ${form.issueType === t ? 'bg-green-50 font-bold' : ''}`}
+                    onClick={() => {
+                      setForm(f => ({ ...f, issueType: t }));
                       setShowIssueType(false);
                     }}
                   >
-                    {issueType}
+                    {t}
                   </li>
                 ))}
               </ul>

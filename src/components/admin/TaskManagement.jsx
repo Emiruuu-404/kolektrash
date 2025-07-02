@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiUser, FiCalendar, FiClock, FiCheckCircle, FiTrash2, FiChevronDown, FiCheck, FiSend, FiUsers } from 'react-icons/fi';
 import { FaUserTie, FaUserFriends, FaTimes } from 'react-icons/fa';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
@@ -127,17 +127,6 @@ const barangayCoords = {
   'Yabo': [13.5850, 122.6250],
 };
 
-// Mock user data for truck drivers and garbage collectors
-const mockTruckDrivers = [
-  { id: 1, name: 'John Doe' },
-  { id: 2, name: 'Jane Smith' },
-];
-const mockGarbageCollectors = [
-  { id: 3, name: 'Emeir Amado' },
-  { id: 4, name: 'Ian Jay Anonuevo' },
-  { id: 5, name: 'Angela Olpato' },
-];
-
 function MapUpdater({ position }) {
   const map = useMap();
   React.useEffect(() => {
@@ -160,6 +149,10 @@ export default function TaskManagement() {
   });
   const [assignLoading, setAssignLoading] = useState(false);
   const [assignSuccess, setAssignSuccess] = useState(null);
+  const [truckDrivers, setTruckDrivers] = useState([]);
+  const [garbageCollectors, setGarbageCollectors] = useState([]);
+  const [loadingDrivers, setLoadingDrivers] = useState(true);
+  const [loadingCollectors, setLoadingCollectors] = useState(true);
 
   // Center on selected barangay
   const center = barangayCoords[selected] || [13.7766, 122.9826];
@@ -208,6 +201,26 @@ export default function TaskManagement() {
       });
     }, 1200);
   };
+
+  useEffect(() => {
+    // Fetch truck drivers
+    fetch('/backend/api/get_truck_drivers.php')
+      .then(res => res.json())
+      .then(data => {
+        setTruckDrivers(data);
+        setLoadingDrivers(false);
+      })
+      .catch(() => setLoadingDrivers(false));
+
+    // Fetch garbage collectors
+    fetch('/backend/api/get_garbage_collectors.php')
+      .then(res => res.json())
+      .then(data => {
+        setGarbageCollectors(data);
+        setLoadingCollectors(false);
+      })
+      .catch(() => setLoadingCollectors(false));
+  }, []);
 
   return (
     <div className="p-6 max-w-full overflow-x-auto bg-green-50 min-h-screen font-sans">
@@ -395,9 +408,10 @@ export default function TaskManagement() {
                   onChange={handleAssignFormChange}
                   required
                   className="w-full border border-green-200 rounded px-3 py-2 text-sm"
+                  disabled={loadingDrivers}
                 >
-                  <option value="">Select Truck Driver</option>
-                  {mockTruckDrivers.map((d) => (
+                  <option value="">{loadingDrivers ? 'Loading...' : 'Select Truck Driver'}</option>
+                  {truckDrivers.map((d) => (
                     <option key={d.id} value={d.id}>{d.name}</option>
                   ))}
                 </select>
@@ -406,19 +420,23 @@ export default function TaskManagement() {
               <div>
                 <label className="block text-sm font-medium text-green-700 mb-1">Garbage Collectors</label>
                 <div className="flex flex-wrap gap-2">
-                  {mockGarbageCollectors.map((gc) => (
-                    <label key={gc.id} className="flex items-center gap-1 text-sm">
-                      <input
-                        type="checkbox"
-                        name="garbageCollectors"
-                        value={gc.id}
-                        checked={assignForm.garbageCollectors.includes(gc.id)}
-                        onChange={handleAssignFormChange}
-                        className="accent-green-600"
-                      />
-                      {gc.name}
-                    </label>
-                  ))}
+                  {loadingCollectors ? (
+                    <span className="text-gray-500 text-sm">Loading...</span>
+                  ) : (
+                    garbageCollectors.map((gc) => (
+                      <label key={gc.id} className="flex items-center gap-1 text-sm">
+                        <input
+                          type="checkbox"
+                          name="garbageCollectors"
+                          value={gc.id}
+                          checked={assignForm.garbageCollectors.includes(gc.id)}
+                          onChange={handleAssignFormChange}
+                          className="accent-green-600"
+                        />
+                        {gc.name}
+                      </label>
+                    ))
+                  )}
                 </div>
               </div>
               {/* Date */}

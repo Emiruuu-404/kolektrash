@@ -1,101 +1,58 @@
 <?php
-require_once '../includes/cors.php';
-require_once '../config/database.php';
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
+header("Content-Type: application/json");
+require_once("../config/database.php");
+
+// Get POST data as JSON
+$data = json_decode(file_get_contents("php://input"), true);
+
+// Validate required fields
+$required = ['username', 'email', 'password', 'firstname', 'lastname', 'contact_num', 'address', 'barangay_id'];
+foreach ($required as $field) {
+    if (empty($data[$field])) {
+        echo json_encode(["success" => false, "message" => "Missing field: $field"]);
+        exit;
+    }
+}
+
+$username = $data['username'];
+$email = $data['email'];
+$password = password_hash($data['password'], PASSWORD_DEFAULT);
+$firstname = $data['firstname'];
+$lastname = $data['lastname'];
+$contact_num = $data['contact_num'];
+$address = $data['address'];
+$barangay_id = $data['barangay_id'];
+
+$conn = (new Database())->connect();
 
 try {
-    $database = new Database();
-    $db = $database->getConnection();
+    $conn->beginTransaction();
 
-    // Get POST data
-    $data = json_decode(file_get_contents("php://input"));
+    // 1. Insert into user_account
+    $stmt = $conn->prepare("INSERT INTO user_account (username, email, password, role) VALUES (?, ?, ?, 'resident')");
+    $stmt->execute([$username, $email, $password]);
+    $user_id = $conn->lastInsertId();
 
-    // Validate required fields
-    if (!$data || !$data->username || !$data->password || !$data->email || !$data->fullName || !$data->barangay) {
-        http_response_code(400);
-        echo json_encode(array("message" => "All fields are required"));
-        exit;
-    }
+    // 2. Insert into user_profile
+    $stmt = $conn->prepare("INSERT INTO user_profile (user_id, firstname, lastname, contact_num, address) VALUES (?, ?, ?, ?, ?)");
+    $stmt->execute([$user_id, $firstname, $lastname, $contact_num, $address]);
 
-    $username = trim($data->username);
-    $email = trim($data->email);
-    $fullName = trim($data->fullName);
-    $barangay = trim($data->barangay);
-    $phone = isset($data->phone) ? trim($data->phone) : null;
-    $address = isset($data->address) ? trim($data->address) : null;
+    // 3. Insert into resident
+    $stmt = $conn->prepare("INSERT INTO resident (user_id, barangay_id) VALUES (?, ?)");
+    $stmt->execute([$user_id, $barangay_id]);
 
-    // Check if username already exists in either table
-    $checkQuery = "SELECT username FROM users WHERE username = :username 
-                   UNION 
-                   SELECT username FROM employees WHERE username = :username";
-    $checkStmt = $db->prepare($checkQuery);
-    $checkStmt->bindParam(":username", $username);
-    $checkStmt->execute();
-
-    if ($checkStmt->rowCount() > 0) {
-        http_response_code(400);
-        echo json_encode(array("message" => "Username already exists"));
-        exit;
-    }
-
-    // Check if email already exists in either table
-    $checkEmailQuery = "SELECT email FROM users WHERE email = :email 
-                        UNION 
-                        SELECT email FROM employees WHERE email = :email";
-    $checkEmailStmt = $db->prepare($checkEmailQuery);
-    $checkEmailStmt->bindParam(":email", $email);
-    $checkEmailStmt->execute();
-
-    if ($checkEmailStmt->rowCount() > 0) {
-        http_response_code(400);
-        echo json_encode(array("message" => "Email already exists"));
-        exit;
-    }
-
-    // Hash the password
-    $hashedPassword = password_hash($data->password, PASSWORD_DEFAULT);
-
-    // Insert new resident
-    $query = "INSERT INTO users (username, password, email, fullName, phone, address, barangay) 
-              VALUES (:username, :password, :email, :fullName, :phone, :address, :barangay)";
-    
-    $stmt = $db->prepare($query);
-    $stmt->bindParam(":username", $username);
-    $stmt->bindParam(":password", $hashedPassword);
-    $stmt->bindParam(":email", $email);
-    $stmt->bindParam(":fullName", $fullName);
-    $stmt->bindParam(":phone", $phone);
-    $stmt->bindParam(":address", $address);
-    $stmt->bindParam(":barangay", $barangay);
-
-    if ($stmt->execute()) {
-        $userId = $db->lastInsertId();
-
-        // Create welcome notification
-        $notificationQuery = "INSERT INTO notifications (recipient_type, recipient_id, title, message, type) 
-                             VALUES ('user', :user_id, 'Welcome to Koletrash!', 'Your resident account has been successfully created. You can now request garbage collection and view schedules.', 'success')";
-        $notificationStmt = $db->prepare($notificationQuery);
-        $notificationStmt->bindParam(":user_id", $userId);
-        $notificationStmt->execute();
-
-        http_response_code(201);
-        echo json_encode(array(
-            "message" => "Resident registered successfully",
-            "user" => array(
-                "id" => $userId,
-                "username" => $username,
-                "email" => $email,
-                "fullName" => $fullName,
-                "barangay" => $barangay,
-                "userType" => "resident"
-            )
-        ));
-    } else {
-        http_response_code(500);
-        echo json_encode(array("message" => "Failed to register resident"));
-    }
-
+    $conn->commit();
+    echo json_encode(["success" => true, "message" => "Resident registered successfully"]);
 } catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(array("message" => "Server error: " . $e->getMessage()));
+    $conn->rollBack();
+    echo json_encode(["success" => false, "message" => "Registration failed: " . $e->getMessage()]);
 }
 ?>

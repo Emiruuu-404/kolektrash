@@ -1,12 +1,11 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { FiUser, FiLock, FiEye, FiEyeOff, FiLogIn } from 'react-icons/fi'
 import SignUp from './SignUp'
 import ForgotPassword from './ForgotPassword'
 
 function Login() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [formData, setFormData] = useState({
     username: '',  // Changed from email to username
     password: '',
@@ -15,26 +14,11 @@ function Login() {
   const [showSignUp, setShowSignUp] = useState(false)
   const [showForgot, setShowForgot] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
-  
-  // Handle success message from signup redirect
-  useEffect(() => {
-    if (location.state?.message) {
-      setSuccess(location.state.message)
-      // Pre-fill username if provided
-      if (location.state.username) {
-        setFormData(prev => ({ ...prev, username: location.state.username }))
-      }
-      // Clear the state to prevent showing message again on refresh
-      window.history.replaceState({}, document.title)
-    }
-  }, [location])
   
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setSuccess(''); // Clear success message when trying to login
     setLoading(true);
 
     try {
@@ -65,13 +49,13 @@ function Login() {
           case 'resident':
             navigate('/resident', { replace: true });
             break;
-          case 'barangayhead':
+          case 'barangay_head':
             navigate('/barangayhead', { replace: true });
             break;
-          case 'truckdriver':
+          case 'truck_driver':
             navigate('/truckdriver', { replace: true });
             break;
-          case 'garbagecollector':
+          case 'garbage_collector':
             navigate('/garbagecollector', { replace: true });
             break;
           default:
@@ -177,15 +161,6 @@ function Login() {
                 <div className="flex items-center">
                   <span className="text-red-500 mr-2">⚠️</span>
                   <span className="text-sm">{error}</span>
-                </div>
-              </div>
-            )}
-
-            {success && (
-              <div className="bg-green-50 border-l-4 border-green-400 text-green-700 px-4 py-3 rounded-r-md mb-6 shadow-sm">
-                <div className="flex items-center">
-                  <span className="text-green-500 mr-2">✅</span>
-                  <span className="text-sm">{success}</span>
                 </div>
               </div>
             )}

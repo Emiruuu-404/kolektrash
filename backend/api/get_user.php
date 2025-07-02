@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-require_once '../config/database.php';
+require_once '../config/Database.php';
 
 // Instantiate DB & connect
 $database = new Database();
@@ -29,21 +29,8 @@ if (!$user_id) {
 }
 
 try {
-    // Query to get user data from user_account and resident tables
-    $query = "SELECT 
-                ua.user_id as id,
-                ua.username,
-                ua.email,
-                ua.role,
-                r.firstname,
-                r.lastname,
-                r.contact_num as phone,
-                b.barangay_name as barangay
-              FROM user_account ua
-              LEFT JOIN resident r ON ua.user_id = r.user_id
-              LEFT JOIN barangay b ON r.barangay_id = b.barangay_id
-              WHERE ua.user_id = :id LIMIT 1";
-    
+    // Query to get user data
+    $query = "SELECT id, username, email, fullName, role, phone, assignedArea FROM users WHERE id = :id LIMIT 1";
     $stmt = $db->prepare($query);
     $stmt->bindParam(':id', $user_id);
     $stmt->execute();
@@ -51,25 +38,16 @@ try {
     if ($stmt->rowCount() > 0) {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        // Combine first and last name to create fullName
-        $fullName = trim(($user['firstname'] ?? '') . ' ' . ($user['lastname'] ?? ''));
-        if (empty($fullName)) {
-            $fullName = $user['username']; // Fallback to username if no names
-        }
-        
         echo json_encode(array(
             'status' => 'success',
             'data' => array(
                 'id' => $user['id'],
                 'username' => $user['username'],
                 'email' => $user['email'],
-                'fullName' => $fullName,
-                'firstName' => $user['firstname'],
-                'lastName' => $user['lastname'],
+                'fullName' => $user['fullName'],
                 'role' => $user['role'],
                 'phone' => $user['phone'],
-                'barangay' => $user['barangay'],
-                'assignedArea' => $user['barangay'] // For compatibility
+                'assignedArea' => $user['assignedArea']
             )
         ));
     } else {

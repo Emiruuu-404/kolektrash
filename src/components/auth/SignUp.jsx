@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiMapPin, FiChevronDown, FiUserPlus, FiSearch } from 'react-icons/fi'
 import { authService } from '../../services/authService'
+import axios from "axios";
 
 const barangays = [
   'Aldezar',
@@ -54,14 +55,16 @@ const barangays = [
 
 export default function SignUp() {
   const [form, setForm] = useState({
-    firstName: '',
-    lastName: '',
-    contactNum: '',
+    firstname: '',
+    lastname: '',
+    contact_num: '',
     email: '',
     username: '',
     barangay: barangays[0],
     password: '',
     confirmPassword: '',
+    address: '',
+    barangay_id: ''
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
@@ -78,7 +81,7 @@ export default function SignUp() {
   }
 
   const handleBarangaySelect = (b) => {
-    setForm(prev => ({ ...prev, barangay: b }))
+    setForm(prev => ({ ...prev, barangay: b, barangay_id: b, address: b }))
     setDropdownOpen(false)
     setBarangaySearch('')
   }
@@ -123,46 +126,33 @@ export default function SignUp() {
     }
 
     try {
-      const userData = {
-        firstName: form.firstName,
-        lastName: form.lastName,
-        contactNum: form.contactNum,
-        email: form.email,
-        username: form.username,
-        barangay: form.barangay,
-        password: form.password
-      }
-
-      const response = await authService.signup(userData)
-      
-      // Set success message and start redirect process
-      setSuccess('Account created successfully! Redirecting to login...')
+      const res = await axios.post(
+        "http://localhost/koletrash/backend/api/register_resident.php",
+        form
+      );
+      setSuccess(res.data.message);
       
       // Clear form
       setForm({
-        firstName: '',
-        lastName: '',
-        contactNum: '',
+        firstname: '',
+        lastname: '',
+        contact_num: '',
         email: '',
         username: '',
         barangay: barangays[0],
         password: '',
         confirmPassword: '',
+        address: '',
+        barangay_id: ''
       })
 
-      // Redirect to login after showing success for 1.5 seconds
+      // Redirect to login after 2 seconds
       setTimeout(() => {
-        navigate('/login', { 
-          state: { 
-            message: 'Account created successfully! Please login with your credentials.',
-            newUser: true,
-            username: userData.username 
-          }
-        })
-      }, 1500)
+        navigate('/login')
+      }, 2000)
 
     } catch (error) {
-      setError(error.message || 'Signup failed. Please try again.')
+      setError(error.response?.data?.message || 'Registration failed. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -182,23 +172,6 @@ export default function SignUp() {
               <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
               <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Success overlay */}
-      {success && (
-        <div className="fixed inset-0 bg-white bg-opacity-95 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="text-center p-8 bg-white rounded-2xl shadow-2xl max-w-sm mx-4">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">✅</span>
-            </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">Account Created Successfully!</h3>
-            <p className="text-sm text-gray-600 mb-4">Welcome to KolekTrash! You will be redirected to the login page.</p>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-green-600 h-2 rounded-full animate-pulse" style={{width: '100%'}}></div>
-            </div>
-            <p className="text-xs text-gray-500 mt-2">Redirecting...</p>
           </div>
         </div>
       )}
@@ -279,9 +252,9 @@ export default function SignUp() {
                   </span>
                   <input
                     type="text"
-                    name="firstName"
+                    name="firstname"
                     required
-                    value={form.firstName}
+                    value={form.firstname}
                     onChange={handleChange}
                     className="pl-12 w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
                     placeholder="Enter your first name"
@@ -299,9 +272,9 @@ export default function SignUp() {
                   </span>
                   <input
                     type="text"
-                    name="lastName"
+                    name="lastname"
                     required
-                    value={form.lastName}
+                    value={form.lastname}
                     onChange={handleChange}
                     className="pl-12 w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
                     placeholder="Enter your last name"
@@ -319,9 +292,9 @@ export default function SignUp() {
                   </span>
                   <input
                     type="text"
-                    name="contactNum"
+                    name="contact_num"
                     required
-                    value={form.contactNum}
+                    value={form.contact_num}
                     onChange={handleChange}
                     className="pl-12 w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
                     placeholder="Enter your contact number"
@@ -377,48 +350,17 @@ export default function SignUp() {
                   <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-green-500 transition-colors z-10">
                     <FiMapPin size={18} />
                   </span>
-                  <button
-                    type="button"
-                    className="pl-12 pr-12 w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white text-left"
-                    onClick={handleDropdownToggle}
-                    onKeyDown={handleDropdownKeyDown}
-                    tabIndex={0}
-                    disabled={loading}
+                  <select
+                    name="barangay_id"
+                    value={form.barangay_id}
+                    onChange={handleChange}
+                    required
                   >
-                    {form.barangay}
-                    <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400">
-                      <FiChevronDown size={18} />
-                    </span>
-                  </button>
-                  {dropdownOpen && (
-                    <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-hidden">
-                      <div className="flex items-center px-4 py-3 border-b border-gray-100 bg-gray-50 sticky top-0">
-                        <FiSearch className="w-4 h-4 text-gray-400 mr-2" />
-                        <input
-                          type="text"
-                          value={barangaySearch}
-                          onChange={handleBarangaySearch}
-                          className="w-full bg-transparent outline-none text-sm"
-                          placeholder="Search barangay..."
-                          autoFocus
-                        />
-                      </div>
-                      <div className="max-h-40 overflow-y-auto">
-                        {filteredBarangays.length === 0 && (
-                          <div className="px-4 py-3 text-gray-400 text-sm">No results found</div>
-                        )}
-                        {filteredBarangays.map((b) => (
-                          <div
-                            key={b}
-                            className="px-4 py-3 hover:bg-green-50 cursor-pointer text-sm transition-colors"
-                            onClick={() => handleBarangaySelect(b)}
-                          >
-                            {b}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                    <option value="">Select Barangay</option>
+                    <option value="1">Aldezar</option>
+                    <option value="2">San Isidro</option>
+                    {/* ...other barangays */}
+                  </select>
                 </div>
               </div>
 
@@ -477,6 +419,18 @@ export default function SignUp() {
                     </button>
                   </div>
                 </div>
+              </div>
+
+              {/* Address */}
+              <div className="space-y-1">
+                <label className="block text-sm font-semibold text-gray-700">Address</label>
+                <input
+                  name="address"
+                  value={form.address}
+                  onChange={handleChange}
+                  placeholder="Enter your address"
+                  required
+                />
               </div>
 
               {/* Submit Button */}

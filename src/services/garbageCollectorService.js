@@ -1,4 +1,4 @@
-const API_BASE_URL = '/api';
+const API_BASE_URL = 'http://localhost/koletrash/backend/api';
 
 export const garbageCollectorService = {
   async getGarbageCollector(userId) {

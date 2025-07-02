@@ -1,2 +1,0 @@
-INSERT INTO `admin` (`admin_id`, `username`, `email`, `password`, `firstname`, `lastname`, `contact_num`, `address`) VALUES
-(2, 'admin2', 'admin2@example.com', 'adminpass', 'Jane', 'Doe', '09123456789', 'Admin Address'); 

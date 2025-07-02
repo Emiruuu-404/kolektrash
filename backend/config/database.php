@@ -24,9 +24,4 @@ class Database {
 
         return $this->conn;
     }
-
-    // Alternative method name for compatibility
-    public function getConnection() {
-        return $this->connect();
-    }
 }

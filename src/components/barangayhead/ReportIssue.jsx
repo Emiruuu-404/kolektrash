@@ -9,6 +9,7 @@ const issueTypes = [
 export default function ReportIssue() {
   // State for user data and loading
   const [userData, setUserData] = useState(null);
+  const [barangayHeadData, setBarangayHeadData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const [form, setForm] = useState({
@@ -22,7 +23,7 @@ export default function ReportIssue() {
   const [error, setError] = useState('');
   const [showIssueType, setShowIssueType] = useState(false);
 
-  // Fetch user data on component mount
+  // Fetch user data and barangay head data on component mount
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -39,17 +40,30 @@ export default function ReportIssue() {
               setUserData(user);
               setForm(prevForm => ({
                 ...prevForm,
-                name: user.fullName || '',
-                barangay: user.barangay || ''
+                name: user.fullName || user.name || 'Barangay Head User',
+                barangay: user.assignedArea || user.barangay || ''
               }));
+
+              // Fetch barangay head data if we have a barangay
+              const userBarangay = user.assignedArea || user.barangay;
+              if (userBarangay) {
+                try {
+                  const barangayHeadResponse = await authService.getBarangayHead(userBarangay);
+                  if (barangayHeadResponse.status === 'success') {
+                    setBarangayHeadData(barangayHeadResponse.data);
+                  }
+                } catch (barangayHeadError) {
+                  console.error('Error fetching barangay head data:', barangayHeadError);
+                }
+              }
             } else {
               console.error('Failed to fetch user data:', response.message);
               // Fallback to stored data
               setUserData(userDataLocal);
               setForm(prevForm => ({
                 ...prevForm,
-                name: userDataLocal.fullName || userDataLocal.name || '',
-                barangay: userDataLocal.barangay || userDataLocal.assignedArea || ''
+                name: userDataLocal.fullName || userDataLocal.name || 'Barangay Head User',
+                barangay: userDataLocal.assignedArea || userDataLocal.barangay || ''
               }));
             }
           } else {
@@ -57,8 +71,8 @@ export default function ReportIssue() {
             setUserData(userDataLocal);
             setForm(prevForm => ({
               ...prevForm,
-              name: userDataLocal.fullName || userDataLocal.name || '',
-              barangay: userDataLocal.barangay || userDataLocal.assignedArea || ''
+              name: userDataLocal.fullName || userDataLocal.name || 'Barangay Head User',
+              barangay: userDataLocal.assignedArea || userDataLocal.barangay || ''
             }));
           }
         } else {
@@ -75,8 +89,8 @@ export default function ReportIssue() {
             setUserData(userDataLocal);
             setForm(prevForm => ({
               ...prevForm,
-              name: userDataLocal.fullName || userDataLocal.name || '',
-              barangay: userDataLocal.barangay || userDataLocal.assignedArea || ''
+              name: userDataLocal.fullName || userDataLocal.name || 'Barangay Head User',
+              barangay: userDataLocal.assignedArea || userDataLocal.barangay || ''
             }));
           } catch (parseError) {
             console.error('Error parsing stored user data:', parseError);
@@ -162,6 +176,8 @@ export default function ReportIssue() {
     );
   }
 
+  const filteredBarangays = [];
+
   return (
     <div className="min-h-[80vh] flex items-center justify-center bg-gradient-to-br from-green-50 to-white py-8 px-2">
       <form
@@ -171,6 +187,24 @@ export default function ReportIssue() {
       >
         <h2 className="text-2xl font-bold text-green-800 mb-2 text-center tracking-tight">Submit Report Issue</h2>
         
+        {/* Display barangay head info if available */}
+        {barangayHeadData && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+            <h3 className="text-sm font-semibold text-green-800 mb-1">Barangay Head Information</h3>
+            <p className="text-xs text-green-700">
+              <strong>Name:</strong> {barangayHeadData.name}
+            </p>
+            <p className="text-xs text-green-700">
+              <strong>Barangay:</strong> {barangayHeadData.barangay}
+            </p>
+            {barangayHeadData.email && (
+              <p className="text-xs text-green-700">
+                <strong>Email:</strong> {barangayHeadData.email}
+              </p>
+            )}
+          </div>
+        )}
+
         {error && (
           <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded px-3 py-2 text-sm">
             <FiAlertCircle /> {error}
@@ -208,7 +242,7 @@ export default function ReportIssue() {
             disabled 
             className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none text-base" 
           />
-          <p className="text-xs text-gray-500 mt-1">Your assigned barangay</p>
+          <p className="text-xs text-gray-500 mt-1">Your assigned barangay (cannot be changed)</p>
         </div>
         {/* Issue Type Dropdown */}
         <div className="flex flex-col gap-1 relative">

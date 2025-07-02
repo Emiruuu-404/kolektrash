@@ -28,7 +28,7 @@ class User {
         $stmt->execute();
         if($stmt->rowCount() > 0) {
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            if($this->password === $row['password']) {
+            if(password_verify($this->password, $row['password'])) {
                 $this->id = $row['user_id'];
                 $this->email = $row['email'];
                 $this->fullName = $row['username'];
